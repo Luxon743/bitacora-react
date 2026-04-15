@@ -1,99 +1,156 @@
-import './App.css'
+import './App.css';
+import { useEffect, useState } from "react";
+import { FormularioCarga } from './components/FormularioCarga';
+import { HistorialCargas } from './components/HistorialCargas';
 
 function App() {
+  const [kmInicio, setKmInicio] = useState("");
+  const [kmActual, setKmActual] = useState("");
+  const [litros, setLitros] = useState("");
+  const [resultado, setResultado] = useState("");
+  
+  const [viajeActual, setViajeActual] = useState({
+    kmInicial: null as number | null,
+    cargas: [] as { km: number; litros: number }[],
+  });
+
+  // Cargar localStorage
+  useEffect(() => {
+    const data = localStorage.getItem("viajeActual");
+    if (data) {
+      const parsed = JSON.parse(data);
+      setViajeActual(parsed);
+
+      if (parsed.kmInicial !== null) {
+        setKmInicio(parsed.kmInicial.toString());
+      }
+    }
+  }, []);
+
+  // Guardar en localStorage
+  useEffect(() => {
+    localStorage.setItem("viajeActual", JSON.stringify(viajeActual));
+  }, [viajeActual]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    const kmI = parseFloat(kmInicio);
+    const kmA = parseFloat(kmActual);
+    const l = parseFloat(litros);
+
+    if (kmA <= kmI) {
+      setResultado('<p class="text-red-500">Error: Los Km finales deben ser mayores a los iniciales.</p>');
+      return;
+    }
+
+    let nuevoViaje = { ...viajeActual };
+
+    if (nuevoViaje.kmInicial === null) {
+      nuevoViaje.kmInicial = kmI;
+    }
+
+    if (isNaN(kmI) || isNaN(kmA)) {
+      setResultado('<p class="text-red-500">El kilometraje actual es obligatorio</p>');
+      return;
+    }
+
+    if (isNaN(l) || l <= 0) {
+      setResultado('<p class="text-red-500">Ingresá litros válidos</p>');
+      return;
+    }
+
+    let ultimoKm = nuevoViaje.kmInicial;
+    if (nuevoViaje.cargas.length > 0) {
+      ultimoKm = nuevoViaje.cargas[nuevoViaje.cargas.length - 1].km;
+    }
+
+    if (kmA <= ultimoKm!) {
+      setResultado(`<p class="text-red-500">El KM actual debe ser mayor al último registrado (${ultimoKm})</p>`);
+      return;
+    }
+
+    if (kmI < 0 || kmA < 0) {
+      setResultado('<p class="text-red-500">Los kilómetros no pueden ser negativos</p>');
+      return;
+    }
+
+    nuevoViaje.cargas.push({ km: kmA, litros: l });
+
+    setViajeActual(nuevoViaje);
+    setResultado(`<div class="bg-green-100 text-green-700 p-4 rounded-lg"><p>Carga agregada correctamente</p></div>`);
+
+    setKmActual("");
+    setLitros("");
+  }
+
+  function handleCalcular() {
+    if (viajeActual.cargas.length === 0) {
+      setResultado('<p class="text-red-500">No hay cargas registradas</p>');
+      return;
+    }
+
+    let totalLitros = 0;
+    viajeActual.cargas.forEach((c) => (totalLitros += c.litros));
+
+    const kmFinal = viajeActual.cargas[viajeActual.cargas.length - 1].km;
+    const distancia = kmFinal - viajeActual.kmInicial!;
+
+    if (distancia <= 0) {
+      setResultado('<p class="text-red-500">Error en el cálculo de distancia</p>');
+      return;
+    }
+
+    const consumo = (totalLitros / distancia) * 100;
+
+    setResultado(`
+      <div class="bg-green-100 text-green-700 p-4 rounded-lg">
+        <p><strong>Distancia total:</strong> ${distancia} km</p>
+        <p><strong>Litros totales:</strong> ${totalLitros} L</p>
+        <p><strong>Consumo promedio:</strong> ${consumo.toFixed(2)} L/100km</p>
+      </div>
+    `);
+  }
+
+  function handleReset() {
+    const reset = { kmInicial: null, cargas: [] };
+    setViajeActual(reset);
+    localStorage.removeItem("viajeActual");
+
+    setKmInicio("");
+    setKmActual("");
+    setLitros("");
+
+    setResultado('<p class="text-orange-500">Viaje reiniciado</p>');
+  }
+
   return (
     <div className="bg-gray-200 min-h-screen flex items-center justify-center p-6 font-sans">
       <div className="w-full max-w-6xl flex gap-6">
+        
+        {}
+        <FormularioCarga 
+          kmInicio={kmInicio}
+          setKmInicio={setKmInicio}
+          kmActual={kmActual}
+          setKmActual={setKmActual}
+          litros={litros}
+          setLitros={setLitros}
+          kmInicialDeshabilitado={viajeActual.kmInicial !== null}
+          handleSubmit={handleSubmit}
+          resultado={resultado}
+        />
 
-        {/* FORMULARIO */}
-        <div className="w-1/2 bg-white p-6 rounded-2xl shadow">
-
-          <h1 className="text-2xl font-bold text-gray-700 mb-6">
-            Registro de Carga
-          </h1>
-
-          <form className="flex flex-col gap-4">
-
-            <div>
-              <label className="text-sm text-gray-600">
-                Kilometraje inicial
-              </label>
-              <input
-                type="number"
-                min="0"
-                className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-gray-600">
-                Kilometraje actual
-              </label>
-              <input
-                type="number"
-                min="0"
-                className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-gray-600">
-                Litros cargados
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition"
-            >
-              Agregar Carga
-            </button>
-
-          </form>
-
-          <div className="mt-8 text-center min-h-[50px]"></div>
-        </div>
-
-        {/* TABLA */}
-        <div className="w-1/2 bg-white p-6 rounded-2xl shadow flex flex-col">
-
-          <h2 className="text-xl font-semibold text-gray-700 mb-4">
-            Historial de Cargas
-          </h2>
-
-          <div className="flex-1 overflow-y-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-100 text-gray-600">
-                  <th className="p-2">KM</th>
-                  <th className="p-2">Litros</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-
-          <div className="mt-4 flex gap-2">
-            <button className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">
-              Calcular Viaje
-            </button>
-
-            <button className="flex-1 bg-gray-300 py-2 rounded-lg hover:bg-gray-400 transition">
-              Limpiar
-            </button>
-          </div>
-
-        </div>
+        {}
+        <HistorialCargas 
+          cargas={viajeActual.cargas}
+          handleCalcular={handleCalcular}
+          handleReset={handleReset}
+        />
 
       </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
