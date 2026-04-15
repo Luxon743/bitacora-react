@@ -1,5 +1,3 @@
-import React from "react";
-
 interface Carga {
     km: number;
     litros: number;
